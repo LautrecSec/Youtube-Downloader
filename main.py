@@ -1,7 +1,9 @@
+import os
 import sys
 
 from PyQt5.QtWidgets import QApplication, QFileDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 from pytube import YouTube
+from moviepy.editor import AudioFileClip
 
 
 class Downloader(QWidget):
@@ -46,10 +48,22 @@ class Downloader(QWidget):
         if not url or not folder:
             return
 
-        # Download the video
+        # Download the audio
         yt = YouTube(url)
-        video = yt.streams.first()
-        video.download(folder)
+        audio = yt.streams.filter(only_audio=True).first()
+        download_path = audio.download(folder)
+        
+        # Convert the audio to mp3
+        clip = AudioFileClip(download_path)
+        if download_path.endswith('.3gpp'):
+            mp3_path = download_path.replace('.3gpp', '.mp3')
+        else:
+            mp3_path = download_path.replace('.mp4', '.mp3')
+        clip.write_audiofile(mp3_path)
+
+        # Delete the original file
+        if os.path.exists(download_path):
+            os.remove(download_path)
 
 
 if __name__ == "__main__":
@@ -57,4 +71,3 @@ if __name__ == "__main__":
     downloader = Downloader()
     downloader.show()
     sys.exit(app.exec_())
-
