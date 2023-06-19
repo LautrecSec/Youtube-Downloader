@@ -1,9 +1,36 @@
 import os
 import sys
-
+from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QFileDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 from pytube import YouTube
 from moviepy.editor import AudioFileClip
+
+
+class DownloadThread(QThread):
+    progress_signal = pyqtSignal(int)
+
+    def __init__(self, url, folder):
+        super().__init__()
+        self.url = url
+        self.folder = folder
+
+    def run(self):
+        # Download the audio
+        yt = YouTube(self.url)
+        audio = yt.streams.filter(only_audio=True).first()
+        download_path = audio.download(self.folder)
+
+        # Convert the audio to mp3
+        clip = AudioFileClip(download_path)
+        if download_path.endswith('.3gpp'):
+            mp3_path = download_path.replace('.3gpp', '.mp3')
+        else:
+            mp3_path = download_path.replace('.mp4', '.mp3')
+        clip.write_audiofile(mp3_path)
+
+        # Delete the original file
+        if os.path.exists(download_path):
+            os.remove(download_path)
 
 
 class Downloader(QWidget):
@@ -30,7 +57,7 @@ class Downloader(QWidget):
 
         # Connect the signals and slots
         self.browse_button.clicked.connect(self.browse_folder)
-        self.download_button.clicked.connect(self.download_video)
+        self.download_button.clicked.connect(self.start_download)
 
         # Set the window properties
         self.setWindowTitle("Video Downloader")
@@ -41,29 +68,15 @@ class Downloader(QWidget):
         folder = QFileDialog.getExistingDirectory(self, "Choose Save Folder")
         self.folder_edit.setText(folder)
 
-    def download_video(self):
-        """ Download the video from the specified URL and save it to the specified folder. """
+    def start_download(self):
+        """ Start a new thread to download the video. """
         url = self.url_edit.text()
         folder = self.folder_edit.text()
         if not url or not folder:
             return
 
-        # Download the audio
-        yt = YouTube(url)
-        audio = yt.streams.filter(only_audio=True).first()
-        download_path = audio.download(folder)
-        
-        # Convert the audio to mp3
-        clip = AudioFileClip(download_path)
-        if download_path.endswith('.3gpp'):
-            mp3_path = download_path.replace('.3gpp', '.mp3')
-        else:
-            mp3_path = download_path.replace('.mp4', '.mp3')
-        clip.write_audiofile(mp3_path)
-
-        # Delete the original file
-        if os.path.exists(download_path):
-            os.remove(download_path)
+        self.download_thread = DownloadThread(url, folder)
+        self.download_thread.start()
 
 
 if __name__ == "__main__":
