@@ -12,14 +12,13 @@ class DownloadThread(QThread):
         self.url = url.strip()  # URL of the YouTube video.
         self.folder = folder  # Folder where to save the downloaded audio.
 
-    # The run method is the starting point for the thread.
     def run(self):
         try:
             # Create a YouTube object.
             yt = YouTube(self.url)
 
             # Filter the audio stream from the YouTube object and get the first stream.
-            stream = yt.streams.filter(only_audio=True).first()
+            stream = yt.streams.get_audio_only()
 
             # If the audio stream is available, download it and convert it to MP3.
             if stream:
@@ -39,7 +38,6 @@ class DownloadThread(QThread):
         except exceptions.PytubeError as e:
             print(f"PytubeError encountered: {str(e)}")
 
-# This class creates the GUI for the downloader application.
 class Downloader(QWidget):
     def __init__(self):
         super().__init__()
@@ -70,12 +68,10 @@ class Downloader(QWidget):
         self.setWindowTitle("Audio Downloader")
         self.resize(500, 200)
 
-    # Open a file dialog when the Browse button is clicked to choose the download folder.
     def browse_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Choose Save Folder")
         self.folder_edit.setText(folder)
 
-    # Start a download thread when the Download button is clicked.
     def start_download(self):
         url = self.url_edit.text()
         folder = self.folder_edit.text()
@@ -84,8 +80,6 @@ class Downloader(QWidget):
         self.audio_download_thread = DownloadThread(url, folder)
         self.audio_download_thread.start()
 
-# This part checks if the script is being run directly or imported from another script.
-# If it is run directly, it creates an instance of the application and shows the downloader window.
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     downloader = Downloader()
