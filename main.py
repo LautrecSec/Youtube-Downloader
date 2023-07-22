@@ -1,48 +1,58 @@
-# Import necessary modules
+# Importing necessary libraries:
+# os: to interact with the operating system
+# PyQt5: to create the graphical user interface (GUI)
+# pytube: to download videos from YouTube
+# moviepy: to convert the downloaded files to mp3 format
 import os
 from PyQt5.QtCore import QThread
 from PyQt5.QtWidgets import QApplication, QFileDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 from pytube import YouTube, exceptions
 from moviepy.editor import AudioFileClip
 
-# This class is responsible for downloading audio from a YouTube video in a separate thread.
+# DownloadThread is a subclass of QThread, a PyQt5 class that creates a new thread. This allows the download to 
+# occur in a separate thread from the GUI, preventing the GUI from freezing during the download.
 class DownloadThread(QThread):
     def __init__(self, url, folder):
+        # Initialize QThread
         super().__init__()
-        self.url = url.strip()  # URL of the YouTube video.
-        self.folder = folder  # Folder where to save the downloaded audio.
+
+        # Set the YouTube video URL and the download folder
+        self.url = url.strip()
+        self.folder = folder
 
     def run(self):
         try:
-            # Create a YouTube object.
+            # Create a YouTube object using the video URL
             yt = YouTube(self.url)
 
-            # Filter the audio stream from the YouTube object and get the first stream.
+            # Get the first audio stream available for the video
             stream = yt.streams.get_audio_only()
 
-            # If the audio stream is available, download it and convert it to MP3.
+            # If the audio stream exists, download the stream, convert the file to mp3, and remove the original file
             if stream:
                 download_path = stream.download(self.folder)
                 mp3_path = os.path.splitext(download_path)[0] + '.mp3'
                 clip = AudioFileClip(download_path)
                 clip.write_audiofile(mp3_path)
                 clip.close()
-
-                # Remove the original audio file after conversion.
                 if os.path.exists(download_path):
                     os.remove(download_path)
+
+            # If no audio stream is available, print an error message
             else:
                 print(f"No audio stream found for URL: {self.url}")
 
-        # Handle any exceptions that occur during the downloading process.
+        # If a PytubeError occurs during the download, print the error
         except exceptions.PytubeError as e:
             print(f"PytubeError encountered: {str(e)}")
 
+# The Downloader class creates the application window and controls the download process.
 class Downloader(QWidget):
     def __init__(self):
+        # Initialize QWidget
         super().__init__()
 
-        # Create the UI elements.
+        # Create the GUI elements: labels, line edits, and buttons
         self.url_label = QLabel("Video URL:")
         self.url_edit = QLineEdit()
         self.folder_label = QLabel("Save to:")
@@ -50,7 +60,7 @@ class Downloader(QWidget):
         self.browse_button = QPushButton("Browse")
         self.download_button = QPushButton("Download")
 
-        # Arrange the UI elements in a vertical layout.
+        # Set the layout of the GUI using QVBoxLayout, which arranges the GUI elements vertically
         layout = QVBoxLayout()
         layout.addWidget(self.url_label)
         layout.addWidget(self.url_edit)
@@ -60,18 +70,23 @@ class Downloader(QWidget):
         layout.addWidget(self.download_button)
         self.setLayout(layout)
 
-        # Connect the buttons to their respective methods.
+        # Connect the "Browse" button to the browse_folder method, which allows the user to choose the download folder
+        # Connect the "Download" button to the start_download method, which starts the download
         self.browse_button.clicked.connect(self.browse_folder)
         self.download_button.clicked.connect(self.start_download)
 
-        # Set the window title and size.
+        # Set the title of the application window and its size
         self.setWindowTitle("Audio Downloader")
         self.resize(500, 200)
 
+    # When the "Browse" button is clicked, open a folder dialog for the user to choose the download folder
+    # Then, display the chosen folder in the folder_edit line edit
     def browse_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Choose Save Folder")
         self.folder_edit.setText(folder)
 
+    # When the "Download" button is clicked, get the video URL and the download folder from the line edits
+    # Then, create a DownloadThread with these values and start the thread
     def start_download(self):
         url = self.url_edit.text()
         folder = self.folder_edit.text()
@@ -80,6 +95,8 @@ class Downloader(QWidget):
         self.audio_download_thread = DownloadThread(url, folder)
         self.audio_download_thread.start()
 
+# If the script is run directly (not imported), create an application and a Downloader object
+# Show the Downloader (which is the application window), and start the application's event loop
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     downloader = Downloader()
