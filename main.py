@@ -32,7 +32,7 @@ class DownloadThread(QThread):
 class Downloader(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Audio Downloader")
+        self.setWindowTitle("Youtube Audio Downloader")
         self.setWindowIcon(QIcon('icon.png')) # Add an icon file
 
         self.url_label = QLabel("Video URL:")
